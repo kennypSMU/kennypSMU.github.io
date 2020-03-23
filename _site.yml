@@ -1,0 +1,8 @@
+name: "KennypSMU Website"
+navbar:
+  title: "Unit 12 Website"
+  left:
+    - text: "Home"
+      href: index.html
+    - text: "Beer Study"
+      href: Beers_and_Breweries.html

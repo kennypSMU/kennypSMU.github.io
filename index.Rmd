@@ -1,0 +1,19 @@
+---
+title: "Website"
+author: "Kenneth Poling"
+date: "3/22/2020"
+output: html_document
+---
+
+Name: Kenneth Poling
+
+![Kenneth Poling](C:\Users\kenny\Documents\SMU\DS-6306 Doing Data Science\Unit 12\Website\DS6306 Website\IMG_20200322_173007813_MP.jpg)
+
+Lives in: Thompsonville, IL
+
+Occupation: IT Technician (Three Angels Broadcasting Network)
+
+School: Undergrad - Southwestern Adventist University
+        High School - Thompsonville Christian Academy
+        
+Interests: Computers, Sci-fi, Disc Golf, Pickle Ball
