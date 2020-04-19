@@ -6,3 +6,5 @@ navbar:
       href: index.html
     - text: "Beer Study"
       href: Beers_and_Breweries.html
+    - text: "Frito Lay Attrition"
+      href: CaseStudy2.html  
