@@ -1,0 +1,138 @@
+---
+title: "Case Study 2"
+author: "Kenneth Poling"
+date: "4/17/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Introduction
+
+The following project is designed to determine the explanatory variables with the greatest influence on Attrition and Monthly Income. I will determine correlation between the other vairables and my two response variables to determine which explanatory variables have the highest correlation. I will test KNN and Naive Bayes models to find the best solution for Attrition, and will use linear regression with Monthly Income.
+
+A link to a YouTube version of this presentation can be found here: https://www.youtube.com/watch?v=TxFuFt4LnL8&feature=youtu.be&hd=1
+
+## Executive Summary
+
+I have been asked to provide the most common factors associated with attrition (voluntary departure form teh work force) at Frito Lay. Below I will demonstrate the correlation between attrition and job involvement, marital status, and overtime exemptions. These three, as you will see, are the variables with the highest correlation factor to attrition. I will also provide a couple of insights that may help you grow this business in the future.
+
+```{r Preparation}
+library(tidyverse)
+library(Hmisc)
+library(GGally)
+CaseStudy2.data <- read.csv("CaseStudy2-data.csv")
+   View(CaseStudy2.data)
+
+summary(CaseStudy2.data)
+```
+
+## Correlation
+
+Now that the data is ready to be manipulated, pay special attention to the Attrition column in each dataset as the r values will show higher correlations on a few variables.
+
+```{r Correlation}
+CaseNum <- CaseStudy2.data %>% select(ID, Age, DailyRate, DistanceFromHome, Education, EmployeeCount, EmployeeNumber, EnvironmentSatisfaction, HourlyRate, JobInvolvement, JobLevel, JobSatisfaction, MonthlyIncome, MonthlyRate, NumCompaniesWorked, PercentSalaryHike, PerformanceRating, RelationshipSatisfaction, StandardHours, StockOptionLevel, TotalWorkingYears, TrainingTimesLastYear, WorkLifeBalance, YearsAtCompany,YearsInCurrentRole, YearsSinceLastPromotion, YearsWithCurrManager)
+CaseNum <- CaseNum %>% mutate(Attrition = as.numeric(CaseStudy2.data$Attrition))
+
+resNum <- rcorr(as.matrix(CaseNum))
+
+CaseFact <- CaseStudy2.data %>% select(ID,MonthlyIncome,RelationshipSatisfaction)
+CaseFact <- CaseFact %>% mutate(Attrition = as.numeric(CaseStudy2.data$Attrition),BusinessTravel = as.numeric(CaseStudy2.data$BusinessTravel),Department = as.numeric(CaseStudy2.data$Department),EducationField = as.numeric(CaseStudy2.data$EducationField),Gender = as.numeric(CaseStudy2.data$Gender),JobRole = as.numeric(CaseStudy2.data$JobRole),MaritalStatus = as.numeric(CaseStudy2.data$MaritalStatus),Over18 = as.numeric(CaseStudy2.data$Over18),Overtime = as.numeric(CaseStudy2.data$OverTime))
+
+resFact <- rcorr(as.matrix(CaseFact))
+
+#Narrowing it down
+CaseMerge <- merge(CaseNum,CaseFact,by="ID")
+caseFinal <- CaseMerge %>% select(Attrition.x, JobInvolvement, MaritalStatus, Overtime)
+resFinal <- rcorr(as.matrix(caseFinal))
+#Show Graphically
+caseFinal %>% ggpairs()
+
+CaseStudy2.data %>% ggplot(mapping = aes(x=JobInvolvement, y = Attrition )) + geom_point(position = "jitter") + ggtitle("Attrition vs Job Involvement")
+CaseStudy2.data %>% ggplot(mapping = aes(x=MaritalStatus, y = Attrition )) + geom_point(position = "jitter") + ggtitle("Attrition vs Marital Status")
+CaseStudy2.data %>% ggplot(mapping = aes(x=OverTime, y = Attrition )) + geom_point(position = "jitter") + ggtitle("Attrition vs Overtime Eligibility")
+CaseStudy2.data %>% ggplot(mapping = aes(x=JobLevel, y = MonthlyIncome )) + geom_point(position = "jitter") + ggtitle("Monthly Income vs Job Level")
+```
+
+##Notes
+
+Overtime eligibility, Marital status, and job involvement appear to have the highest correletion to Attrition Rates. Job Involvement has a negative correleation. The more involved the worker is, the less attrition is likely. It seems that those who are divorced are less prone to attrition than married or single. Also, it appears that those not exempt from overtime are less likely to remain with the company.
+
+Also, it appears that Job Level is closely correlated to Monthly Income, with an r of 0.95. This means that as Job level increases, salary is likely to increase. 
+
+
+```{r Models}
+#KNN
+library(class)
+library(caret)
+library(e1071)
+
+trainIndices = sample(1:dim(CaseStudy2.data)[1],round(.7 * dim(CaseStudy2.data)[1]))
+train = CaseStudy2.data[trainIndices,]
+test = CaseStudy2.data[-trainIndices,]
+
+train$Attrition = as.numeric(train$Attrition)
+train$MaritalStatus = as.numeric(train$MaritalStatus)
+train$OverTime = as.numeric(train$OverTime)
+test$Attrition = as.numeric(test$Attrition)
+test$MaritalStatus = as.numeric(test$MaritalStatus)
+test$OverTime = as.numeric(test$OverTime)
+
+accs = data.frame(accuracy = numeric(30), k = numeric(30))
+ 
+for(i in 1:30)
+{
+   classifications = knn(train[,c(15,19,24)],test[,c(15,19,24)],train$Attrition, prob = TRUE, k = i)
+   table(test$Attrition,classifications)
+   CM = confusionMatrix(table(test$Attrition,classifications))
+   accs$accuracy[i] = CM$overall[1]
+   accs$k[i] = i
+}
+
+plot(accs$k,accs$accuracy, type = "l", xlab = "k")
+
+#Naive Bayes
+CaseNB <- CaseStudy2.data %>% select(Attrition, JobInvolvement, MaritalStatus, OverTime)
+trainIndices = sample(1:dim(CaseNB)[1],round(.7 * dim(CaseNB)[1]))
+trainNB = CaseNB[trainIndices,]
+testNB = CaseNB[-trainIndices,]
+modelAtt = naiveBayes(trainNB[,c(2,3,4)],trainNB$Attrition)
+table(predict(modelAtt,testNB[,c(2,3,4)]),testNB$Attrition)
+CM = confusionMatrix(table(predict(modelAtt,testNB[,c(2,3,4)]),testNB$Attrition), positive = 'Yes')
+
+```
+
+##Notes
+
+At this point, using knn, a k value of 20 is recommended. Naive Bayes does not provide a high enough sensitivity using these explanatory variables.
+
+```{r Linear Regression - MonthlyIncome}
+fitMI = lm(MonthlyIncome~JobLevel+Age+YearsAtCompany, data = train)
+summary(fitMI)
+```
+
+##Predicting
+
+To test the models for Attrition and Monthly Income, I will attempt to predict the values of each in the following two datasets: 
+
+CaseStudy2CompSet No Attrition.csv (NoAttr)
+CaseStudy2CompSet No Salary.csv” (NoSalary)
+
+The following code will run the models on the data and predict values for each record. It will then place the values into a corresponding csv to be submitted.
+```{r Predict}
+NoAttr <- read.csv("CaseStudy2CompSet No Attrition.csv")
+  View(NoAttr)
+NoSalary <- read.csv("CaseStudy2CompSet No Salary.csv")
+  View(NoSalary)
+
+#Attrition Prediction
+classificationsAtt = knn(train[,c(15,19,24)],test[,c(15,19,24)],train$Attrition, prob = TRUE, k = 20)
+write.csv(classificationsAtt, "Case2PredictionsPoling Attrition.csv")
+  
+#Monthly Income Prediction  
+MIPred = predict(fitMI, newdata = NoSalary)
+write.csv(MIPred, "Case2PredictionsPoling Salary.csv")
+```
